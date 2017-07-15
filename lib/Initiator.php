@@ -136,6 +136,26 @@ class Initiator extends \Controller_Addon {
             }
         }
 
+        if($page_config_m = $this->isPageRestricted()){             
+            if($page_config_m['based_on_ip']){
+                $country_m = $this->app->country;
+                $state_m = $this->app->state;
+
+                if(($country_m->loaded() AND ($country_m['status'] =='InActive')) OR ($state_m->loaded() AND ($state_m['status'] =='InActive')))
+                    if($redirect_page_url = $page_config_m['navigate_to_page'])
+                        $this->app->redirect($this->app->url($redirect_page_url));
+                    // if($page_config_m['restrict_page_content'])
+                        // Restricted Content
+            }else{
+                if($redirect_page_url = $page_config_m['navigate_to_page'])
+                    $this->app->redirect($this->app->url($redirect_page_url));
+                if($page_config_m['restrict_page_content'])
+                    // Restricted Content
+                if(!$page_config_m['restrict_page_content'] AND !$page_config_m['navigate_to_page'])
+                    // Default Text
+            }            
+        }
+
         if($this->app->isEditing){
             $this->app->jui
                 ->addStaticInclude('ace/ace/ace')
@@ -219,6 +239,32 @@ class Initiator extends \Controller_Addon {
         $this->app->exportFrontEndTool('xepan\cms\Tool_AwesomeSlider');
 
         return $this;
+    }
+
+    function isPageRestricted(){        
+        $arr = explode('/',$_SERVER['REDIRECT_URL']);
+        $count = count($arr);
+        $current_page_name = $arr[$count-2];
+        
+        $page_config_m = $this->add('xepan\base\Model_ConfigJsonModel',
+        [
+            'fields'=>[
+                        'page_name'=>'Line',
+                        'navigate_to_page'=>'Line',
+                        'restrict_page_content'=>'xepan\base\RichText',
+                        'based_on_ip'=>'DropDown'
+                        ],
+                'config_key'=>'FRONTEND_RESTRICTED_PAGES',
+                'application'=>'cms'
+        ]);
+         
+        $page_config_m->addCondition('page_name',$current_page_name);
+        $page_config_m->tryLoadAny();
+
+        if(!$page_config_m->loaded())
+            return false;
+
+        return $page_config_m;
     }
 
     function isSiteOffline(){
